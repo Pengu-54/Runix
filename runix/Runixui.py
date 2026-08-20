@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+
+from PyQt6 import QtCore, QtGui, QtWidgets
+
+
+class Ui_MainWindow(object):
+    def setupUi(self, MainWindow):
+        MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(815, 495)
+        MainWindow.setMinimumSize(QtCore.QSize(815, 495))
+        MainWindow.setMaximumSize(QtCore.QSize(815, 495))
+        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setObjectName("centralwidget")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setContentsMargins(-1, 0, -1, 0)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.Filebutton = QtWidgets.QPushButton(self.centralwidget)
+        self.Filebutton.setMinimumSize(QtCore.QSize(300, 400))
+        font = QtGui.QFont()
+        font.setPointSize(18)
+        self.Filebutton.setFont(font)
+        self.Filebutton.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
+        self.Filebutton.setObjectName("Filebutton")
+        self.verticalLayout.addWidget(self.Filebutton)
+        self.widget1 = QtWidgets.QWidget(self.centralwidget)
+        self.widget1.setMinimumSize(QtCore.QSize(0, 40))
+        self.widget1.setMaximumSize(QtCore.QSize(16777215, 60))
+        self.widget1.setObjectName("widget1")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.widget1)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.Runbutton = QtWidgets.QPushButton(self.widget1)
+        self.Runbutton.setMinimumSize(QtCore.QSize(0, 40))
+        self.Runbutton.setObjectName("Runbutton")
+        self.horizontalLayout.addWidget(self.Runbutton)
+        self.CompileButton = QtWidgets.QPushButton(self.widget1)
+        self.CompileButton.setMinimumSize(QtCore.QSize(0, 40))
+        self.CompileButton.setObjectName("CompileButton")
+        self.horizontalLayout.addWidget(self.CompileButton)
+        self.Settingbutton = QtWidgets.QToolButton(self.widget1)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Fixed)
+        sizePolicy.setHorizontalStretch(40)
+        sizePolicy.setVerticalStretch(40)
+        sizePolicy.setHeightForWidth(self.Settingbutton.sizePolicy().hasHeightForWidth())
+        self.Settingbutton.setSizePolicy(sizePolicy)
+        self.Settingbutton.setMinimumSize(QtCore.QSize(40, 40))
+        self.Settingbutton.setObjectName("Settingbutton")
+        self.horizontalLayout.addWidget(self.Settingbutton)
+        self.verticalLayout.addWidget(self.widget1)
+        MainWindow.setCentralWidget(self.centralwidget)
+
+        self.retranslateUi(MainWindow)
+        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.Filebutton.setText(_translate("MainWindow", "Drop The File Here"))
+        self.Runbutton.setText(_translate("MainWindow", "Compile and Run"))
+        self.CompileButton.setText(_translate("MainWindow", "Compile"))
+        self.Settingbutton.setText(_translate("MainWindow", "..."))

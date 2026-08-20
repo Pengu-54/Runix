@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Runix
+Comment=Run and compile code files with one click
+Comment[tr]=Kod dosyalarını tek tıkla çalıştır ve derle
+Exec=runix %f
+Icon=io.github.pengu_54.Runix
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+MimeType=text/x-python;text/x-csrc;text/x-c++src;text/x-java;application/javascript;text/x-shellscript;
+Keywords=run;compile;code;runner;
