@@ -347,8 +347,14 @@ def runfile(file = None,compile=False,ui=False):
     if file.endswith(".py"):
         interpreterlanguage("python3",["python3",file],terminal,klasor,flag,writeflag)
     elif file.endswith(".cpp"):
+        if not CPP_compiler_name:
+            subprocess.Popen([terminal]+writeflag+["ERROR No C++ compiler found. Please install g++ or clang++."])
+            return
         compilerlanguea(CPP_compiler_name, [CPP_compiler_name, file, "-o", filename], ui, compile, file, klasor, terminal, flag, writeflag)
     elif file.endswith(".c"):
+        if not C_compiler_name:
+            subprocess.Popen([terminal]+writeflag+["ERROR No C compiler found. Please install gcc or clang."])
+            return
         compilerlanguea(C_compiler_name, [C_compiler_name, file, "-o", filename], ui, compile, file, klasor, terminal, flag, writeflag)
     elif file.endswith(".sh"):
         subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file])
