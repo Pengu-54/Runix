@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Runix
+Comment=Universal file runner for Linux
+Exec=python3 /usr/share/runix/Runix.py %f
+Icon=/usr/share/icons/hicolor/scalable/apps/Runix.svg
+Terminal=false
+Type=Application
+Categories=Development;
+MimeType=text/x-python;text/x-csrc;text/x-c++src;text/x-java;application/javascript;text/x-shellscript;text/x-lua;text/x-ruby;text/x-perl;text/x-go;text/rust;text/x-dart;text/x-csharp;application/x-executable;application/x-java-archive;
+StartupNotify=false
