@@ -401,6 +401,7 @@ def runfile(file = None,compile=False,ui=False):
             return
         if not shutil.which("ld"):
             subprocess.Popen([terminal]+writeflag+["ERROR ld linker not found. Please install binutils."])
+            return
         assembly = subprocess.run(["nasm","-f","elf64",file,"-o",f"{filename}.o"],capture_output=True,text=True,cwd=klasor)
         if assembly.returncode == 0:
             ldassmebly = subprocess.run(["ld",f"{filename}.o","-o",filename],capture_output=True,text=True,cwd=klasor)
