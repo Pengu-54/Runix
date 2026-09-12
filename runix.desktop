@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Runix
 Comment=Universal file runner for Linux
-Exec=python3 /usr/share/runix/Runix.py %f
+Exec=env QT_QPA_PLATFORM=xcb python3 /usr/share/runix/Runix.py %f
 Icon=/usr/share/icons/hicolor/scalable/apps/Runix.svg
 Terminal=false
 Type=Application
