@@ -1,7 +1,7 @@
 # Maintainer: Pengu-54
 pkgname=runix
 pkgver=1.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Universal file runner for Linux"
 arch=('any')
 url="https://github.com/Pengu-54/Runix"
@@ -28,6 +28,6 @@ package() {
     # Create launcher script
     install -dm755 "$pkgdir/usr/bin"
     echo '#!/bin/bash
-python3 /usr/share/runix/Runix.py "$@"' > "$pkgdir/usr/bin/runix"
+env QT_QPA_PLATFORM=xcb python3 /usr/share/runix/Runix.py "$@"' > "$pkgdir/usr/bin/runix"
     chmod 755 "$pkgdir/usr/bin/runix"
 }
