@@ -34,6 +34,7 @@ class pyg(QMainWindow):
         self.drag = False 
         self.shortcuts()
         self.ui.decompilebutton.clicked.connect(self.decompile)
+
     def shortcuts(self):
         self.openfileshortcut = QShortcut(QKeySequence("Ctrl+O"), self)
         self.openfileshortcut.activated.connect(self.file)
@@ -47,6 +48,11 @@ class pyg(QMainWindow):
         self.runfileshortcut.activated.connect(self.run)
         self.opensettingshorcut = QShortcut(QKeySequence("Ctrl+."),self)
         self.opensettingshorcut.activated.connect(lambda:self.setting.show())
+
+
+    
+
+
 
 
         
@@ -66,7 +72,7 @@ class pyg(QMainWindow):
 
     def file(self):
         self.drag = False
-        self.path = QFileDialog.getOpenFileName(self,"Select a file","","(*.py *.c *.cpp *.sh *.js *.java *.php *.lua *.pl *.rb *.go *.rs *.dart *.swift *.cs *.asm *.ts *.kt *.jar)")
+        self.path = QFileDialog.getOpenFileName(self,"Select a file","","(*.py *.c *.cpp *.sh *.js *.java *.php *.lua *.pl *.rb *.go *.rs *.dart *.swift *.cs *.asm *.ts *.kt *.jar )")
         if f"{self.path[0]}" != "":
             short_path = os.path.basename(f"{self.path[0]}")
             self.ui.Filebutton.setText(short_path)
@@ -78,6 +84,7 @@ class pyg(QMainWindow):
         else:
             self.path = None
             self.ui.Runbutton.setEnabled(False)
+
 
     def closefile(self):
         self.path = None
@@ -115,6 +122,8 @@ class pyg(QMainWindow):
 
         self.rfwindow.show()
 
+
+
     def searchrf(self):
         self.searchdata = []
         self.textveri = self.searchbar.text()
@@ -125,6 +134,9 @@ class pyg(QMainWindow):
             if self.textveri in i:
                 self.searchdata.append(i)
         self.listmodel.setStringList(self.searchdata)
+
+
+
 
     def selectedfile(self,index):
         data = index.data()
@@ -207,7 +219,7 @@ class pyg(QMainWindow):
             return
 
         if self.drag == True:
-            runfile(self.path,compile=True)
+            runfile(self.path,compile=True,ui=True)
         else:
             runfile(self.path[0],compile=True,ui=True)      
         self.ui.CompileButton.hide()
@@ -215,6 +227,9 @@ class pyg(QMainWindow):
         self.ui.Filebutton.setText("Drop The File Here")
         self.ui.Runbutton.setEnabled(False)
         self.drag = False
+        
+
+
 
             
 def main():
@@ -227,11 +242,33 @@ def main():
 def checkstartup():
     compilestatus = False
     decompilestatus = False
+    terminalsettings = False
+    ccompilestatus = False
+    cppcompilestatus = False
     if len(sys.argv) > 1:
         for file in sys.argv[1:]:
                 if file == "--compile":
                     compilestatus = True
                     decompilestatus = False
+                    continue
+                elif file == "--setterminal":
+                    decompilestatus = False
+                    compilestatus = False
+                    terminalsettings = True
+                    continue
+                elif file == "--setccompiler" and terminalsettings == False:
+                    ccompilestatus = True
+                    cppcompilestatus = False
+                    decompilestatus = False
+                    compilestatus = False
+                    terminalsettings = False
+                    continue
+                elif file == "--setcppcompiler" and terminalsettings == False and ccompilestatus == False:
+                    ccompilestatus = False
+                    cppcompilestatus = True
+                    decompilestatus = False
+                    compilestatus = False
+                    terminalsettings = False
                     continue
                 elif file == "--decompile":
                     compilestatus = False
@@ -240,9 +277,87 @@ def checkstartup():
                 elif decompilestatus == True:
                     decompilefile(file,ui=False)
                 else:
-                    runfile(file,compilestatus)
+                    if terminalsettings == True:
+                        writeterminalsetting(file)   
+                    elif ccompilestatus == True:
+                        setccompiler(file)   
+                    elif cppcompilestatus == True:
+                        setcppcompiler(file)   
+                    else:
+                        runfile(file,compilestatus)
     else:
         main()
+
+def setcppcompiler(file):
+    path = os.path.expanduser("~/.config/runix")
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if os.path.exists(f"{path}/default_compiler.json"):
+        with open(f"{path}/default_compiler.json","r",encoding="utf8") as f:
+            data = json.load(f)
+        data["CPP_COMPILER"] = file
+        if not shutil.which(data["CPP_COMPILER"]):
+            print(f'{data["CPP_COMPILER"]} not found')
+            return
+        if file != "g++" and file != "clang++":
+            print("invalid compiler")
+            return
+        with open(f"{path}/default_compiler.json","w",encoding="utf8") as b:
+            json.dump(data,b)
+            print(f'The settings were saved successfully\nThe C++ compiler:{data["CPP_COMPILER"]}')
+    else:
+        data = {"CPP_COMPILER": "g++", "C_COMPILER": "gcc"}
+        if file != "g++" and file != "clang++":
+            print("invalid compiler")
+            return
+        if shutil.which("gcc"):
+            data["C_COMPILER"] = "gcc"
+        elif shutil.which("clang"):
+            data["C_COMPILER"] = "clang"
+        if shutil.which(file):
+            data["CPP_COMPILER"] = file
+        else:
+            print(f"{file} not found")
+            return
+        with open(f"{path}/default_compiler.json","w",encoding="utf8") as m:
+            json.dump(data,m)
+            print(f'The settings were saved successfully\nThe C++ compiler:{data["CPP_COMPILER"]}')
+
+def setccompiler(file):
+    path = os.path.expanduser("~/.config/runix")
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not shutil.which(file):
+        print(f"{file} not found ")
+        return
+    if os.path.exists(f"{path}/default_compiler.json"):
+        with open(f"{path}/default_compiler.json","r",encoding="utf8") as n:
+            data = json.load(n)
+        data["C_COMPILER"] = file
+        if data["C_COMPILER"] != "clang" and data["C_COMPILER"] != "gcc":
+            print("invalid compiler")
+            return
+        with open(f"{path}/default_compiler.json","w") as b:
+            json.dump(data,b,ensure_ascii=False)
+            print(f'The settings were saved successfully\nThe C compiler:{data["C_COMPILER"]}')
+    else:
+        data = {"CPP_COMPILER": "g++", "C_COMPILER": "gcc"}
+        if file != "gcc" and file != "clang":
+            print("invalid compiler")
+            return
+        if shutil.which("g++"):
+            data["CPP_COMPILER"] = "g++"
+        elif shutil.which("clang++"):
+            data["CPP_COMPILER"] = "clang++"
+        if shutil.which(file):
+            data["C_COMPILER"] = file
+        else:
+            print(f"{file} not found")
+            return
+        with open(f"{path}/default_compiler.json","w",encoding="utf8") as m:
+            json.dump(data,m)
+        print(f'The settings were saved successfully\nThe C compiler:{data["C_COMPILER"]}')
+        
 
 
 def runfile(file = None,compile=False,ui=False):
@@ -281,6 +396,12 @@ def runfile(file = None,compile=False,ui=False):
         terminal = "gnome-terminal"
         flag = ["--","bash","-lc",'cd "$1" || exit; shift; "$@"; echo; read -p "Press Enter to close..." _',"runix"]
         writeflag = ["--","bash","-lc",'printf "%b\n" "$1"; read -p "Press Enter to close..." _',"runix"]
+    else:
+        if ui == True:
+            QMessageBox.critical(None,"Error","No supported terminal found.")
+        else:
+            subprocess.Popen(["notify-send","Error","No supported terminal found"])
+        return
 
 
 
@@ -314,6 +435,13 @@ def runfile(file = None,compile=False,ui=False):
             terminal = "gnome-terminal"
             flag = ["--","bash","-lc",'cd "$1" || exit; shift; "$@"; echo; read -p "Press Enter to close..." _',"runix"]
             writeflag = ["--","bash","-lc",'printf "%b\n" "$1"; read -p "Press Enter to close..." _',"runix"]
+        if not shutil.which(terminal):
+            if ui == True:
+                QMessageBox.critical(None,"Error",f"{terminal} not found")
+            else:
+                subprocess.Popen(["notify-send","Error",f"{terminal} not found"])
+            return
+            
 
     if klasor == "":
         klasor = "."
@@ -323,10 +451,11 @@ def runfile(file = None,compile=False,ui=False):
         return
         
     filename = os.path.splitext(os.path.basename(file))[0]
-    elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
-    if "ELF" in elf.stdout:
-        subprocess.Popen([terminal]+flag+[klasor]+[file])
-        return
+    if shutil.which("file"):
+        elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+        if "ELF" in elf.stdout:
+            subprocess.Popen([terminal]+flag+[klasor]+[file])
+            return
     C_compiler_name = ""
     CPP_compiler_name = ""
     if shutil.which("g++"):
@@ -343,6 +472,9 @@ def runfile(file = None,compile=False,ui=False):
             cjsondata = json.load(f)
             C_compiler_name = cjsondata["C_COMPILER"]
             CPP_compiler_name = cjsondata["CPP_COMPILER"]
+
+
+    
     
     if file.endswith(".py"):
         interpreterlanguage("python3",["python3",file],terminal,klasor,flag,writeflag)
@@ -411,7 +543,7 @@ def runfile(file = None,compile=False,ui=False):
                 QMessageBox.information(None,"Compile","Successfully compiled")
             elif ldassmebly.returncode != 0:
                 lderror = ldassmebly.stderr
-                subprocess.Popen([terminal]+writeflag+[klasor]+[lderror])
+                subprocess.Popen([terminal]+writeflag+[lderror])
         else:
             assemblyerror = assembly.stderr
             subprocess.Popen([terminal]+writeflag+[assemblyerror])
@@ -426,10 +558,6 @@ def runfile(file = None,compile=False,ui=False):
             subprocess.Popen([terminal]+flag+[klasor]+["java","-jar",file])
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR java not found. Please install the JRE/JDK."])
-    
-
-        
-
 
     else:
         if ui is True:
@@ -496,6 +624,40 @@ def decompilefile(file,ui=True):
             subprocess.run(["notify-send","Error","Jadx not found Please install Jadx"])
     else:
         subprocess.run(["notify-send","File type","This file type is not supported"])
+
+def writeterminalsetting(terminal):
+    terminals = ["Xfce-Terminal","Gnome-console","Kitty","Konsole","Alacritty","Gnome-terminal","Auto"]
+    if terminal == "Gnome-console":
+        if not shutil.which("kgx"):
+            print(f"{terminal} not found")
+            return
+    elif terminal == "Xfce-Terminal":
+        if not shutil.which("xfce4-terminal"):
+            print(f"{terminal} not found")
+            return
+    elif terminal == "Auto":
+        pass
+    else:
+        if not shutil.which(terminal.lower()):
+            print(f"{terminal} not found")
+            return
+            
+    timer = 0
+    for i in terminals:
+        timer += 1
+        if i == terminal:
+            break
+        if timer == 7:
+            print("Invalid terminal. Only the following terminals are valid: Kitty, Konsole, Gnome-console, Xfce-terminal, Alacritty, Gnome-terminal,Auto")
+            return
+    path = os.path.expanduser("~/.config/runix")
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    with open(f"{path}/default_terminal.txt","w",encoding="utf8") as f:
+        f.write(terminal)
+    print("The terminal settings have been successfully saved")
+
         
         
 
