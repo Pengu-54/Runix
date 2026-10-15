@@ -1,6 +1,6 @@
 # Maintainer: Pengu-54
 pkgname=runix
-pkgver=1.2
+pkgver=1.3
 pkgrel=2
 pkgdesc="Universal file runner for Linux"
 arch=('any')
