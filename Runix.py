@@ -9,6 +9,7 @@ import subprocess
 import os
 import shutil
 import json
+import time
 
 
 class pyg(QMainWindow):
@@ -86,6 +87,7 @@ class pyg(QMainWindow):
             self.ui.Runbutton.setEnabled(False)
 
 
+
     def closefile(self):
         self.path = None
         self.drag = False
@@ -95,6 +97,7 @@ class pyg(QMainWindow):
         self.ui.Runbutton.setEnabled(False)
         self.ui.decompilebutton.hide()
     def recentylfiles(self):
+        print(f'[{time.strftime("%H:%M:%S")}] Opened Recently Files Window')
         self.data = []
         path = os.path.expanduser("~/.config/runix")
         self.rfwindow = QDialog(self)
@@ -227,12 +230,16 @@ class pyg(QMainWindow):
         self.ui.Filebutton.setText("Drop The File Here")
         self.ui.Runbutton.setEnabled(False)
         self.drag = False
+        self.path = None
+
+
         
 
 
 
             
 def main():
+    os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland.textinput=false"
     app = QApplication(sys.argv)
     win = pyg()
     win.show()
@@ -548,7 +555,7 @@ def runfile(file = None,compile=False,ui=False):
             assemblyerror = assembly.stderr
             subprocess.Popen([terminal]+writeflag+[assemblyerror])
     elif file.endswith(".ts"):
-        interpreterlanguage("node",["npx","tsx",file],terminal,klasor,flag,writeflag)
+        interpreterlanguage("npx",["npx","tsx",file],terminal,klasor,flag,writeflag)
 
     elif file.endswith(".kt"):
         compilerlanguea("kotlinc",["kotlinc",file,"-include-runtime","-d",f"{filename}.jar"],ui,compile,file,klasor,terminal,flag,writeflag,["java","-jar",f"{filename}.jar"])
@@ -588,7 +595,6 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
         subprocess.Popen([terminal]+writeflag+[languageerror])
 
 def decompilefile(file,ui=True):
-    decompilercommand = []
     decompiler = "objdump"
     spath = os.path.expanduser("~/.config/runix")
     if not os.path.exists(spath):
@@ -596,19 +602,21 @@ def decompilefile(file,ui=True):
     if os.path.exists(f"{spath}/Default_decompiler.txt"):
         with open(f"{spath}/Default_decompiler.txt","r",encoding="utf8") as f:
             decompiler = f.read()
-    if decompiler == "retdec" and shutil.which("retdec-decompiler"):
-        decompilercommand = ["retdec-decompiler"]
-    else:
-        outputfile = f"{file}.asm"
-        decompilercommand = ["bash", "-c", f"objdump -d {file} > {outputfile}"]
 
     klasor = os.path.dirname(file)
     elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
     if "ELF" in elf.stdout:
-        result = subprocess.run(decompilercommand+[file])
+        if decompiler == "retdec" and shutil.which("retdec-decompiler"):
+            result = subprocess.run(["retdec-decompiler", file])
+        elif shutil.which("objdump"):
+            with open(f"{file}.asm", "w", encoding="utf8") as out:
+                result = subprocess.run(["objdump", "-d", file], stdout=out)
+        else:
+            subprocess.run(["notify-send","Error","objdump not found Please install binutils"])
+            return
         if result.returncode == 0:
             subprocess.run(["notify-send","Decompile","The decompilation was successful"])
-        elif result.returncode != 0:
+        else:
             subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
         
     elif file.endswith(".jar"):
