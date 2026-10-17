@@ -62,7 +62,7 @@ class setting(QMainWindow):
             with open(f"{path}/Default_decompiler.txt","w",encoding="utf8") as f:
                 f.write("objdump")
         elif decompiler == "Retdec":
-            if shutil.which("retdec"):
+            if shutil.which("retdec-decompiler"):
                 with open(f"{path}/Default_decompiler.txt","w",encoding="utf8") as a:
                     a.write("retdec")
             else:
@@ -100,11 +100,13 @@ class setting(QMainWindow):
             return
         if not os.path.exists(f"{self.path}/default_compiler.json"):
             return
-        with open(f"{self.path}/default_compiler.json") as f:
-        
-            veri = json.load(f)
-        self.settingui.c_combobox.setCurrentText(veri["C_COMPILER"].capitalize())
-        self.settingui.cpp_combobox.setCurrentText(veri["CPP_COMPILER"].capitalize())
+        try:
+            with open(f"{self.path}/default_compiler.json","r",encoding="utf8") as f:
+                veri = json.load(f)
+            self.settingui.c_combobox.setCurrentText(veri["C_COMPILER"].capitalize())
+            self.settingui.cpp_combobox.setCurrentText(veri["CPP_COMPILER"].capitalize())
+        except (json.JSONDecodeError, KeyError):
+            return
 
 
         

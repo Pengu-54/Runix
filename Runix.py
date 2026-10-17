@@ -9,8 +9,8 @@ import subprocess
 import os
 import shutil
 import json
-import time
-
+from runix_flag_window import flagwindow
+import shlex
 
 class pyg(QMainWindow):
     def __init__(self):
@@ -21,6 +21,8 @@ class pyg(QMainWindow):
         self.ui.decompilebutton.hide()
         self.ui.Filebutton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.ui.Filebutton.customContextMenuRequested.connect(self.recentylfiles)
+        self.ui.CompileButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.CompileButton.customContextMenuRequested.connect(self.flagwindowstartup)
         self.setting = setting()
         self.ui.Settingbutton.clicked.connect(lambda:self.setting.show())
         self.ui.Filebutton.clicked.connect(self.file)
@@ -29,12 +31,20 @@ class pyg(QMainWindow):
         self.ui.Runbutton.setText("Run")
         self.path = None
         self.ui.CompileButton.hide()
-        self.setAcceptDrops(True)
+        self.setAcceptDrops(True) 
         self.ui.Runbutton.setEnabled(False)
         self.setWindowTitle("Runix")
         self.drag = False 
         self.shortcuts()
         self.ui.decompilebutton.clicked.connect(self.decompile)
+        self.flagwindow = flagwindow()
+        self.compilercommand = None
+        self.confdir = os.path.expanduser("~/.config/runix")
+        if not os.path.exists(self.confdir):
+            os.mkdir(self.confdir)
+        if os.path.exists(f"{self.confdir}/flag_cpp_c_code.txt"):
+            with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as b:
+                b.write("None")
 
     def shortcuts(self):
         self.openfileshortcut = QShortcut(QKeySequence("Ctrl+O"), self)
@@ -70,6 +80,7 @@ class pyg(QMainWindow):
             self.drag = True
             self.enabledcompilebutton(self.path)
             self.enableddecompilebutton(self.path)
+            self.removeflagconffile()
 
     def file(self):
         self.drag = False
@@ -81,6 +92,7 @@ class pyg(QMainWindow):
             self.ui.Runbutton.setEnabled(True)
             self.enabledcompilebutton(f"{self.path[0]}")
             self.enableddecompilebutton(f"{self.path[0]}")
+            self.removeflagconffile()
             
         else:
             self.path = None
@@ -96,8 +108,10 @@ class pyg(QMainWindow):
         self.setWindowTitle("Runix")
         self.ui.Runbutton.setEnabled(False)
         self.ui.decompilebutton.hide()
+        if os.path.exists(self.confdir):
+            with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as m:
+                m.write("None")
     def recentylfiles(self):
-        print(f'[{time.strftime("%H:%M:%S")}] Opened Recently Files Window')
         self.data = []
         path = os.path.expanduser("~/.config/runix")
         self.rfwindow = QDialog(self)
@@ -124,19 +138,32 @@ class pyg(QMainWindow):
         self.searchbar.textChanged.connect(self.searchrf)
 
         self.rfwindow.show()
+    def flagwindowstartup(self):
+        if self.drag == False:
+            if f"{self.path[0]}".endswith((".cpp",".c")):
+                self.flagwindow.loadfile(f"{self.path[0]}")
+                self.flagwindow.show()
+
+        else:
+            self.flagwindow.loadfile(self.path)
+            self.flagwindow.show()
+
 
 
 
     def searchrf(self):
-        self.searchdata = []
-        self.textveri = self.searchbar.text()
-        if self.textveri == "":
-            self.listmodel.setStringList(self.data)
+        try:
+            self.searchdata = []
+            self.textveri = self.searchbar.text()
+            if self.textveri == "":
+                self.listmodel.setStringList(self.data)
+                return
+            for i in self.reading[::-1]:
+                if self.textveri in i:
+                    self.searchdata.append(i)
+            self.listmodel.setStringList(self.searchdata)
+        except AttributeError:
             return
-        for i in self.reading[::-1]:
-            if self.textveri in i:
-                self.searchdata.append(i)
-        self.listmodel.setStringList(self.searchdata)
 
 
 
@@ -150,10 +177,13 @@ class pyg(QMainWindow):
         self.enabledcompilebutton(self.path)
         self.enableddecompilebutton(self.path)
         self.drag = True
+        self.removeflagconffile()
         self.rfwindow.accept()
 
     def clearmrrf(self):
         path = os.path.expanduser("~/.config/runix")
+        if not os.path.exists(path):
+            os.mkdir(path)
         with open(f"{path}/Mrrf.txt","w") as f:
             f.write("")
         self.data = []
@@ -162,11 +192,20 @@ class pyg(QMainWindow):
 
     def enableddecompilebutton(self,file):
         klasor = os.path.dirname(file)
-        elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
-        if "ELF" in elf.stdout or file.endswith(".jar"):
-            self.ui.decompilebutton.show()
-        else:
-            self.ui.decompilebutton.hide()
+        if shutil.which("file"):
+            elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+        try:
+            if "ELF" in elf.stdout or file.endswith(".jar"):
+                self.ui.decompilebutton.show()
+            else:
+                self.ui.decompilebutton.hide()
+        except UnboundLocalError:
+            QMessageBox.critical(self,"Error",'Please install "file" ')
+
+    def removeflagconffile(self):
+        if os.path.exists(self.confdir):
+            with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as h:
+                h.write("None")
 
     def decompile(self):
         if self.ui.decompilebutton.isHidden():
@@ -205,7 +244,8 @@ class pyg(QMainWindow):
             self.path = None
             if not self.ui.decompilebutton.isHidden():
                 self.ui.decompilebutton.hide()
-            
+
+                
     def enabledcompilebutton(self,file):
         if file.endswith(".cpp") or file.endswith(".c") or file.endswith(".java") or file.endswith((".go",".rs",".dart",".swift",".asm",".kt")):
             self.ui.CompileButton.show()
@@ -231,6 +271,7 @@ class pyg(QMainWindow):
         self.ui.Runbutton.setEnabled(False)
         self.drag = False
         self.path = None
+
 
 
         
@@ -448,7 +489,7 @@ def runfile(file = None,compile=False,ui=False):
             else:
                 subprocess.Popen(["notify-send","Error",f"{terminal} not found"])
             return
-            
+
 
     if klasor == "":
         klasor = "."
@@ -481,7 +522,18 @@ def runfile(file = None,compile=False,ui=False):
             CPP_compiler_name = cjsondata["CPP_COMPILER"]
 
 
-    
+    if os.path.exists(f"{path}/flag_cpp_c_code.txt"):
+        with open(f"{path}/flag_cpp_c_code.txt","r",encoding="utf8") as i:
+            flagdata = i.read()
+        if flagdata != "None" and file.endswith((".cpp",".c")):
+            splitedflagdata = shlex.split(flagdata)
+            if file.endswith(".c"):
+                compilerlanguea(C_compiler_name,splitedflagdata,ui,compile,file,klasor,terminal,flag,writeflag)
+            elif file.endswith(".cpp"):
+                compilerlanguea(CPP_compiler_name,splitedflagdata,ui,compile,file,klasor,terminal,flag,writeflag)
+            return
+
+            
     
     if file.endswith(".py"):
         interpreterlanguage("python3",["python3",file],terminal,klasor,flag,writeflag)
@@ -579,6 +631,7 @@ def interpreterlanguage(langname,command,terminal,klasor,flag,writeflag):
         subprocess.Popen([terminal]+writeflag+[f"Error {langname} not found Please install {langname}"])
 
 def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,writeflag,runcommand=None):
+    path = os.path.expanduser("~/.config/runix")
     filename = os.path.splitext(os.path.basename(file))[0]
     if runcommand == None:
         runcommand = [f"./{filename}"]
@@ -593,6 +646,13 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
     elif language.returncode != 0:
         languageerror = language.stderr
         subprocess.Popen([terminal]+writeflag+[languageerror])
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if file.endswith((".cpp",".c")) and language.returncode == 0:
+        with open(f"{path}/flag_cpp_c_code.txt","w",encoding="utf8") as n:
+            n.write("None")
+
+    
 
 def decompilefile(file,ui=True):
     decompiler = "objdump"
@@ -603,9 +663,26 @@ def decompilefile(file,ui=True):
         with open(f"{spath}/Default_decompiler.txt","r",encoding="utf8") as f:
             decompiler = f.read()
 
-    klasor = os.path.dirname(file)
-    elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
-    if "ELF" in elf.stdout:
+    klasor = os.path.dirname(file) or "."
+
+    if file.endswith(".jar"):
+        if shutil.which("jadx"):
+            filename = os.path.splitext(os.path.basename(file))[0]
+            outputfolder = f"{filename}_decompiled"
+            jde = subprocess.run(["jadx",file,"-d",outputfolder],cwd=klasor)
+            if jde.returncode != 0:
+                subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
+            else:
+                subprocess.run(["notify-send","Decompile","The decompilation was successful"])
+        else:
+            subprocess.run(["notify-send","Error","Jadx not found Please install Jadx"])
+        return
+
+    elf = None
+    if shutil.which("file"):
+        elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+
+    if elf is not None and "ELF" in elf.stdout:
         if decompiler == "retdec" and shutil.which("retdec-decompiler"):
             result = subprocess.run(["retdec-decompiler", file])
         elif shutil.which("objdump"):
@@ -618,20 +695,9 @@ def decompilefile(file,ui=True):
             subprocess.run(["notify-send","Decompile","The decompilation was successful"])
         else:
             subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
-        
-    elif file.endswith(".jar"):
-        if shutil.which("jadx"):
-            filename = os.path.splitext(os.path.basename(file))[0]
-            outputfolder = f"{filename}_decompiled"
-            jde = subprocess.run(["jadx",file,"-d",outputfolder],cwd=klasor)
-            if jde.returncode != 0:
-                subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
-            elif jde.returncode == 0:
-                subprocess.run(["notify-send","Decompile","The decompilation was successful"])
-        else:
-            subprocess.run(["notify-send","Error","Jadx not found Please install Jadx"])
-    else:
-        subprocess.run(["notify-send","File type","This file type is not supported"])
+        return
+
+    subprocess.run(["notify-send","File type","This file type is not supported"])
 
 def writeterminalsetting(terminal):
     terminals = ["Xfce-Terminal","Gnome-console","Kitty","Konsole","Alacritty","Gnome-terminal","Auto"]

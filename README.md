@@ -9,6 +9,7 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 - Supports 18+ programming languages
 - Drag & drop or file picker
 - Compile-only or compile & run
+- Custom compiler flags for C/C++ (`-std`, `-I`, `-include`, `-lm`)
 - Decompile ELF binaries and JAR files (objdump, retdec, jadx)
 - Recently run files list with search
 - Configurable default terminal and compiler
@@ -51,6 +52,26 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 | `F6` | Compile only |
 | `Esc` | Close file |
 
+## Compiler Flags (C / C++)
+
+Right-click the **Compile** button to open the flags window. It is available for `.c` and `.cpp` files.
+
+| Field | Passed to the compiler as | Example input |
+|-------|---------------------------|---------------|
+| `-std` | `-std=<value>` | `c++20` |
+| `-I` | `-I<path>` | `/home/user/project/include` |
+| `-include` | `-include <file>` | `config.h` |
+| `-lm` (checkbox) | `-lm` | Links the math library |
+
+Press **Save** to apply the flags, then use **F5** (compile & run) or **F6** (compile only) as usual.
+
+Notes:
+
+- Flags are **single-use**. They are cleared after the file is compiled successfully, and also when you select another file or close the current one (`Esc`).
+- If the compilation fails, the flags are kept so you can fix the code and try again.
+- Runix uses your default C/C++ compiler (gcc/g++ or clang/clang++) from the settings.
+- Paths containing spaces are supported.
+
 ## Installation
 
 ### AUR (Recommended)
@@ -73,6 +94,7 @@ makepkg -si
 - Python 3
 - PyQt6 (`python-pyqt6`)
 - A terminal emulator (Kitty, Konsole, Alacritty, GNOME Terminal, Xfce Terminal, GNOME Console)
+- `file` (used to detect ELF binaries for the decompile button)
 - Language runtimes/compilers as needed (gcc, g++, python3, node, etc.)
 
 ## Command Line Usage
