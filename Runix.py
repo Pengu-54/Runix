@@ -23,6 +23,8 @@ class pyg(QMainWindow):
         self.ui.Filebutton.customContextMenuRequested.connect(self.recentylfiles)
         self.ui.CompileButton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.ui.CompileButton.customContextMenuRequested.connect(self.flagwindowstartup)
+        self.ui.Runbutton.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.ui.Runbutton.customContextMenuRequested.connect(self.addaarguments)
         self.setting = setting()
         self.ui.Settingbutton.clicked.connect(lambda:self.setting.show())
         self.ui.Filebutton.clicked.connect(self.file)
@@ -40,11 +42,7 @@ class pyg(QMainWindow):
         self.flagwindow = flagwindow()
         self.compilercommand = None
         self.confdir = os.path.expanduser("~/.config/runix")
-        if not os.path.exists(self.confdir):
-            os.mkdir(self.confdir)
-        if os.path.exists(f"{self.confdir}/flag_cpp_c_code.txt"):
-            with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as b:
-                b.write("None")
+
 
     def shortcuts(self):
         self.openfileshortcut = QShortcut(QKeySequence("Ctrl+O"), self)
@@ -145,8 +143,9 @@ class pyg(QMainWindow):
                 self.flagwindow.show()
 
         else:
-            self.flagwindow.loadfile(self.path)
-            self.flagwindow.show()
+            if self.path.endswith((".cpp",".c")):
+                self.flagwindow.loadfile(self.path)
+                self.flagwindow.show()
 
 
 
@@ -190,10 +189,30 @@ class pyg(QMainWindow):
         self.searchdata = []
         self.listmodel.setStringList(self.data)
 
+    def addaarguments(self):
+        try:
+            if not os.path.exists(self.confdir):
+                os.mkdir(self.confdir)
+            arguments,ok = QInputDialog.getText(self,"Argument","Enter an argument")
+            if not ok:
+                return
+            shlex.split(arguments)
+            if ok:
+                if arguments.strip():
+                    with open(f"{self.confdir}/runarguments.txt","w") as f:
+                        f.write(arguments)
+                else:
+                    with open(f"{self.confdir}/runarguments.txt","w") as n:
+                        n.write("None")
+        except ValueError as e:
+            QMessageBox.critical(self,"Error","Invalid argument")
+            return
+    
+
     def enableddecompilebutton(self,file):
         klasor = os.path.dirname(file)
         if shutil.which("file"):
-            elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+            elf = subprocess.run(["file","-b",file],capture_output=True,text=True,cwd=klasor)
         try:
             if "ELF" in elf.stdout or file.endswith(".jar"):
                 self.ui.decompilebutton.show()
@@ -206,6 +225,10 @@ class pyg(QMainWindow):
         if os.path.exists(self.confdir):
             with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as h:
                 h.write("None")
+        if os.path.exists(self.confdir):
+            with open(f"{self.confdir}/runarguments.txt","w") as f:
+                f.write("None")
+        
 
     def decompile(self):
         if self.ui.decompilebutton.isHidden():
@@ -280,7 +303,18 @@ class pyg(QMainWindow):
 
             
 def main():
+    path = os.path.expanduser("~/.config/runix")
+    DB = "xcb;wayland"
+    if os.path.exists(path):
+        if os.path.exists(f"{path}/DB.txt"):
+            with open(f"{path}/DB.txt","r") as b:
+                DB = b.read()
+            if DB == "X11":
+                DB = "xcb;wayland"
+            elif DB == "Wayland":
+                DB = "wayland;xcb"
     os.environ["QT_LOGGING_RULES"] = "qt.qpa.wayland.textinput=false"
+    os.environ["QT_QPA_PLATFORM"] = DB
     app = QApplication(sys.argv)
     win = pyg()
     win.show()
@@ -288,6 +322,12 @@ def main():
 
 
 def checkstartup():
+    path = os.path.expanduser("~/.config/runix")
+    if os.path.exists(path):
+        with open(f"{path}/flag_cpp_c_code.txt","w") as b:
+            b.write("None")
+        with open(f"{path}/runarguments.txt","w") as n:
+            n.write("None")
     compilestatus = False
     decompilestatus = False
     terminalsettings = False
@@ -409,6 +449,7 @@ def setccompiler(file):
 
 
 def runfile(file = None,compile=False,ui=False):
+    file = os.path.abspath(file)
     terminal = ""
     flag = []
     writeflag = []
@@ -500,9 +541,14 @@ def runfile(file = None,compile=False,ui=False):
         
     filename = os.path.splitext(os.path.basename(file))[0]
     if shutil.which("file"):
-        elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+        elf = subprocess.run(["file","-b",file],capture_output=True,text=True,cwd=klasor)
         if "ELF" in elf.stdout:
-            subprocess.Popen([terminal]+flag+[klasor]+[file])
+            elffargument = run_program_with_arguments()
+            if elffargument != None:
+
+                subprocess.Popen([terminal]+flag+[klasor]+[file]+elffargument)
+            else:
+                subprocess.Popen([terminal]+flag+[klasor]+[file])
             return
     C_compiler_name = ""
     CPP_compiler_name = ""
@@ -514,12 +560,14 @@ def runfile(file = None,compile=False,ui=False):
         C_compiler_name = "gcc"
     elif shutil.which("clang"):
         C_compiler_name = "clang"
-
-    if os.path.exists(f"{path}/default_compiler.json"):
-        with open(f"{path}/default_compiler.json","r",encoding="utf8") as f:
-            cjsondata = json.load(f)
-            C_compiler_name = cjsondata["C_COMPILER"]
-            CPP_compiler_name = cjsondata["CPP_COMPILER"]
+    try:
+        if os.path.exists(f"{path}/default_compiler.json"):
+            with open(f"{path}/default_compiler.json","r",encoding="utf8") as f:
+                cjsondata = json.load(f)
+                C_compiler_name = cjsondata["C_COMPILER"]
+                CPP_compiler_name = cjsondata["CPP_COMPILER"]
+    except (json.JSONDecodeError,KeyError):
+        pass
 
 
     if os.path.exists(f"{path}/flag_cpp_c_code.txt"):
@@ -548,7 +596,12 @@ def runfile(file = None,compile=False,ui=False):
             return
         compilerlanguea(C_compiler_name, [C_compiler_name, file, "-o", filename], ui, compile, file, klasor, terminal, flag, writeflag)
     elif file.endswith(".sh"):
-        subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file])
+        shargument = run_program_with_arguments()
+        if shargument != None:
+            subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file]+shargument)
+        else:
+            subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file])
+
     elif file.endswith(".js"):
         interpreterlanguage("node",["node",file],terminal,klasor,flag,writeflag)
     elif file.endswith(".java"):
@@ -558,7 +611,7 @@ def runfile(file = None,compile=False,ui=False):
             if ui == True and compile == True and java.returncode == 0:
                 QMessageBox.information(None,"Compile","Successfully compiled")
             elif java.returncode == 0 and compile == False:
-                subprocess.Popen([terminal]+flag+[klasor]+["java",filename])
+                run_with_argument(terminal,flag,klasor,["java",filename])
             elif java.returncode != 0:
                 javaerror = java.stderr
                 subprocess.Popen([terminal]+writeflag+[javaerror])
@@ -582,7 +635,7 @@ def runfile(file = None,compile=False,ui=False):
        compilerlanguea("swiftc", ["swiftc", file, "-o", filename], ui, compile, file, klasor, terminal, flag, writeflag)
     elif file.endswith(".cs"):
         if shutil.which("dotnet"):
-            subprocess.Popen([terminal]+flag+[klasor]+["dotnet","run",file])
+            run_with_argument(terminal,flag,klasor,["dotnet","run",file])
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR dotnet not found Please install dotnet"])
     elif file.endswith(".asm"):
@@ -597,7 +650,7 @@ def runfile(file = None,compile=False,ui=False):
         if assembly.returncode == 0:
             ldassmebly = subprocess.run(["ld",f"{filename}.o","-o",filename],capture_output=True,text=True,cwd=klasor)
             if ldassmebly.returncode == 0 and compile ==False:
-                subprocess.Popen([terminal]+flag+[klasor]+[f"./{filename}"])
+                run_with_argument(terminal,flag,klasor,[f"./{filename}"])
             elif ldassmebly.returncode == 0 and compile == True and ui == True:
                 QMessageBox.information(None,"Compile","Successfully compiled")
             elif ldassmebly.returncode != 0:
@@ -614,7 +667,7 @@ def runfile(file = None,compile=False,ui=False):
 
     elif file.endswith(".jar"):
         if shutil.which("java"):
-            subprocess.Popen([terminal]+flag+[klasor]+["java","-jar",file])
+            run_with_argument(terminal,flag,klasor,["java","-jar",file])
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR java not found. Please install the JRE/JDK."])
 
@@ -623,16 +676,45 @@ def runfile(file = None,compile=False,ui=False):
             QMessageBox.critical(None,"File Type",f"unsupported file type:{file}")
         else:
             subprocess.Popen([terminal]+writeflag+[f"unsupported file type:{file}"])
+def run_program_with_arguments():
+    path = os.path.expanduser("~/.config/runix")
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if not os.path.exists(f"{path}/runarguments.txt"):
+        with open(f"{path}/runarguments.txt","w") as f:
+            f.write("None")
+    with open(f"{path}/runarguments.txt","r") as b:
+        arguments = b.read()
+    
+    if arguments == "None":
+        return None
+    splitetargument = shlex.split(arguments)
+    return splitetargument
+
+def run_with_argument(terminal,flag,klasor,command):
+    argument = run_program_with_arguments()
+    if argument != None:
+        lang = subprocess.Popen([terminal]+flag+[klasor]+command+argument,)
+    else:
+        subprocess.Popen([terminal]+flag+[klasor]+command)
+
+    
 
 def interpreterlanguage(langname,command,terminal,klasor,flag,writeflag):
     if shutil.which(langname):
-        subprocess.Popen([terminal]+flag+[klasor]+command)
+        argument = run_program_with_arguments()
+        if argument != None:
+            subprocess.Popen([terminal]+flag+[klasor]+command+argument)
+        else:
+            subprocess.Popen([terminal]+flag+[klasor]+command)
+        
     else:
         subprocess.Popen([terminal]+writeflag+[f"Error {langname} not found Please install {langname}"])
 
 def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,writeflag,runcommand=None):
     path = os.path.expanduser("~/.config/runix")
     filename = os.path.splitext(os.path.basename(file))[0]
+    argument = run_program_with_arguments()
     if runcommand == None:
         runcommand = [f"./{filename}"]
     if not shutil.which(languagename):
@@ -640,7 +722,10 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
         return
     language = subprocess.run(command,capture_output=True,text=True,cwd=klasor)
     if language.returncode == 0 and compile == False:
-        subprocess.Popen([terminal]+flag+[klasor]+runcommand)
+        if argument != None:
+            subprocess.Popen([terminal]+flag+[klasor]+runcommand+argument)
+        else:
+            subprocess.Popen([terminal]+flag+[klasor]+runcommand)
     elif compile == True and language.returncode == 0 and ui == True:
         QMessageBox.information(None,"Compile","Successfully compiled")
     elif language.returncode != 0:
@@ -655,6 +740,7 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
     
 
 def decompilefile(file,ui=True):
+    file = os.path.abspath(file)
     decompiler = "objdump"
     spath = os.path.expanduser("~/.config/runix")
     if not os.path.exists(spath):
@@ -680,7 +766,7 @@ def decompilefile(file,ui=True):
 
     elf = None
     if shutil.which("file"):
-        elf = subprocess.run(["file",file],capture_output=True,text=True,cwd=klasor)
+        elf = subprocess.run(["file","-b",file],capture_output=True,text=True,cwd=klasor)
 
     if elf is not None and "ELF" in elf.stdout:
         if decompiler == "retdec" and shutil.which("retdec-decompiler"):
@@ -707,13 +793,13 @@ def writeterminalsetting(terminal):
             return
     elif terminal == "Xfce-Terminal":
         if not shutil.which("xfce4-terminal"):
-            print(f"{terminal} not found")
+            print("Invalid terminal. Only the following terminals are valid: Kitty, Konsole, Gnome-console, Xfce-Terminal, Alacritty, Gnome-terminal, Auto")
             return
     elif terminal == "Auto":
         pass
     else:
         if not shutil.which(terminal.lower()):
-            print(f"{terminal} not found")
+            print(f"{terminal} not found. Please install it")
             return
             
     timer = 0

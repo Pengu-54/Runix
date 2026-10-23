@@ -1,6 +1,6 @@
 # Maintainer: Pengu-54
 pkgname=runix
-pkgver=1.4
+pkgver=1.5
 pkgrel=1
 pkgdesc="Universal file runner for Linux"
 arch=('any')
@@ -10,6 +10,7 @@ depends=('python' 'python-pyqt6' 'file')
 optdepends=('gcc: C/C++ compiling'
             'clang: alternative C/C++ compiler'
             'nodejs: JavaScript/TypeScript'
+            'qt6-wayland: native Wayland support (Display Backend setting)'
             'binutils: objdump decompiling'
             'jadx: JAR decompiling'
             'retdec: ELF decompiling'
@@ -40,6 +41,6 @@ package() {
     # Create launcher script
     install -dm755 "$pkgdir/usr/bin"
     echo '#!/bin/bash
-env QT_QPA_PLATFORM=xcb python3 /usr/share/runix/Runix.py "$@"' > "$pkgdir/usr/bin/runix"
+exec python3 /usr/share/runix/Runix.py "$@"' > "$pkgdir/usr/bin/runix"
     chmod 755 "$pkgdir/usr/bin/runix"
 }

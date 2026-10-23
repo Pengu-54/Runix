@@ -19,6 +19,66 @@ class setting(QMainWindow):
         self.settingui.applycompilebutton.clicked.connect(self.setcompile)
         self.setFixedSize(800,600)
         self.setcurrenttext_compile_combobox()
+        self.confdir = os.path.expanduser("~/.config/runix")
+        self.conffilecontroller()
+        self.settingui.Resetsettings_button.clicked.connect(self.resetsetting)
+        self.settingui.applyrunixsetting_button.clicked.connect(self.DPaply)
+        self.setcurrentDBcombobox()
+        self.settingui.Runix_help_button.clicked.connect(self.runixhelp)
+    def runixhelp(self):
+        rhwindow = QDialog(self)
+        rhwindow.setWindowTitle("Help")
+        rhwindow.setMinimumSize(600,400)
+        rhlayout = QVBoxLayout(rhwindow)
+        helptexedit = QTextEdit(rhwindow)
+        helptexedit.setReadOnly(True)
+        helptexedit.setPlainText("Runix User Guide\n\n"
+            "• Shortcuts: \n"
+            "  - Ctrl+O: Open File\n"
+            "  - Ctrl+H: Most Recently Run Files\n"
+            "  - Esc: Close File\n"
+            "  - F5: Run\n"
+            "  - F6: Compile\n"
+            "  - Ctrl+.: Settings\n\n"
+            "• Right-Click Menus: \n"
+            "  - Right-click the Run button to add arguments,\n"
+            "  - Right-click the Compile button to configure C/C++ flags.\n"
+            "  - Right-click the File button to open the Most Recently Run Files menu\n")
+        rhlayout.addWidget(helptexedit)
+        rhcancelbutton = QPushButton(rhwindow)
+        rhcancelbutton.setText("Cancel")
+        rhlayout.addWidget(rhcancelbutton)
+        rhwindow.setLayout(rhlayout)
+        rhcancelbutton.clicked.connect(lambda:rhwindow.accept())
+        rhwindow.show()
+
+
+    def conffilecontroller(self,Detectfile=None,writefile=None,read=False):
+        if not os.path.exists(self.confdir):
+            os.mkdir(self.confdir)
+        if Detectfile != None and read == False:
+            with open(f"{self.confdir}/{Detectfile}","w") as f:
+                f.write(writefile)
+        elif Detectfile != None and read == True:
+            data = None
+            if os.path.exists(f"{self.confdir}/{Detectfile}"):
+                with open(f"{self.confdir}/{Detectfile}","r") as n:
+                    data = n.read()
+            return data
+            
+    def DPaply(self):
+        DB = self.settingui.DPcombobox.currentText()
+        self.conffilecontroller(Detectfile="DB.txt",writefile=DB)
+        QMessageBox.information(self,"Setting","The program must be restarted for the settings to take effect.")
+    def setcurrentDBcombobox(self):
+        DB = self.conffilecontroller(Detectfile="DB.txt",read=True)
+        if DB == "X11":
+            self.settingui.DPcombobox.setCurrentText("X11")
+        elif DB == "Wayland":
+            self.settingui.DPcombobox.setCurrentText("Wayland")
+        else:
+            self.settingui.DPcombobox.setCurrentText("X11")
+
 
 
     def setcurrentterminalcbox(self):
@@ -32,6 +92,12 @@ class setting(QMainWindow):
                 self.settingui.Terminalcombobox.setCurrentText(veri)
             except FileNotFoundError:
                 return
+    def resetsetting(self):
+        Question = QMessageBox.question(self,"Sure?","Are you sure?",QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if Question == QMessageBox.StandardButton.Yes:
+            shutil.rmtree(self.confdir,ignore_errors=True)
+        
+
 
     def apply(self):
         terminal = self.settingui.Terminalcombobox.currentText()
