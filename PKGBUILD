@@ -1,6 +1,6 @@
 # Maintainer: Pengu-54
 pkgname=runix
-pkgver=1.5
+pkgver=1.6
 pkgrel=1
 pkgdesc="Universal file runner for Linux"
 arch=('any')
@@ -31,7 +31,9 @@ package() {
     install -Dm644 runixsettingui.py "$pkgdir/usr/share/runix/runixsettingui.py"
     install -Dm644 runix_flag_window.py "$pkgdir/usr/share/runix/runix_flag_window.py"
     install -Dm644 ui_runix_flag_ui.py "$pkgdir/usr/share/runix/ui_runix_flag_ui.py"
-
+    install -Dm644 runix_al.py "$pkgdir/usr/share/runix/runix_al.py"
+    install -Dm644 ui_runix_language_ui.py "$pkgdir/usr/share/runix/ui_runix_language_ui.py"
+    
     # Install icon
     install -Dm644 Runix.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/Runix.svg"
 

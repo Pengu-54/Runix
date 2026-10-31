@@ -6,6 +6,7 @@ from runixsettingui import Ui_SettingWindow
 import os 
 import shutil
 import json
+from runix_al import alwindow
 
 class setting(QMainWindow):
     def __init__(self):
@@ -25,6 +26,8 @@ class setting(QMainWindow):
         self.settingui.applyrunixsetting_button.clicked.connect(self.DPaply)
         self.setcurrentDBcombobox()
         self.settingui.Runix_help_button.clicked.connect(self.runixhelp)
+        self.al = alwindow()
+        self.settingui.addlangbutton.clicked.connect(lambda:self.al.show())
     def runixhelp(self):
         rhwindow = QDialog(self)
         rhwindow.setWindowTitle("Help")

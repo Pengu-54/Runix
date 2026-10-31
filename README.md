@@ -12,7 +12,8 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 - Program arguments (right-click **Run**)
 - Custom compiler flags for C/C++ (`-std`, `-I`, `-include`, `-lm`)
 - Decompile ELF binaries and JAR files (objdump, retdec, jadx)
-- Recently run files list with search
+- Recently run files and commands list with search
+- Add your own languages (custom interpreters and compilers)
 - Configurable default terminal, compilers and decompiler
 - Display backend setting (X11 / Wayland)
 - Built-in help and one-click settings reset
@@ -51,7 +52,7 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+O` | Open file |
-| `Ctrl+H` | Recently run files |
+| `Ctrl+H` | Recently run files and commands |
 | `Ctrl+.` | Open settings |
 | `F5` | Run |
 | `F6` | Compile only |
@@ -63,7 +64,7 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 |----------------|--------------|
 | **Run** button | Set program arguments |
 | **Compile** button | Set C/C++ compiler flags (`.c` and `.cpp` only) |
-| File button | Open the recently run files list |
+| File button | Open the recently run files and commands list |
 
 ## Program Arguments
 
@@ -100,6 +101,67 @@ Notes:
 - If the compilation fails, the flags are kept so you can fix the code and try again.
 - Runix uses your default C/C++ compiler (gcc/g++ or clang/clang++) from the settings.
 - Paths containing spaces are supported.
+
+## Recently Run Files and Commands
+
+Press `Ctrl+H` (or right-click the file button) to open the history window. The drop-down at the top switches between two lists:
+
+- **Most Recently Run Files** — click a file to select it again.
+- **Most Recently Run Command** — shows the exact command Runix ran, with any compiler flags and program arguments. Click a command to copy it to the clipboard, then paste it into a terminal.
+
+Both lists have a search box and a **Clear** button.
+
+## Custom Languages
+
+Runix runs the languages in the table above out of the box. For any other language, add it yourself in the **Add Language** window. Each language you add is saved as a small JSON file in `~/.config/runix/custom_lang/` (for example `.f90.json`).
+
+The window asks for:
+
+| Field | What to enter |
+|-------|---------------|
+| Exec | The command, using the placeholders below |
+| File extension | For example `jl` or `.jl` (the dot is added for you) |
+| Compiler or Interpreter name | The program Runix checks for, for example `julia` |
+| Interpreter / Compile | Whether the file is run directly or compiled first |
+| Compiled File Type Extension | `ELF` for a native program, or an extension such as `.jar` (compile only) |
+| Execute command | How to run the compiled file (compile only, not used for `ELF`) |
+
+### Placeholders
+
+Write commands with these placeholders instead of real file names. Each placeholder must be a separate word, for example `-o rcc=compiledfile` (not `-orcc=compiledfile`):
+
+| Placeholder | Replaced with |
+|-------------|---------------|
+| `rcc=file` | The full path of the file you are running |
+| `rcc=compiledfile` | The compiled file name (without the folder). For `ELF` this is the file name without extension, otherwise the extension from "Compiled File Type Extension" is added |
+
+### Examples
+
+An interpreted language (Julia):
+
+| Field | Value |
+|-------|-------|
+| Exec | `julia rcc=file` |
+| File extension | `.jl` |
+| Name | `julia` |
+| Type | Interpreter |
+
+A compiled language that produces a native program (Fortran):
+
+| Field | Value |
+|-------|-------|
+| Exec | `gfortran rcc=file -o rcc=compiledfile` |
+| File extension | `.f90` |
+| Name | `gfortran` |
+| Type | Compile |
+| Compiled File Type Extension | `ELF` |
+
+Notes:
+
+- Extensions of built-in languages (`.py`, `.c`, ...) cannot be overridden.
+- Custom file extensions appear in the file picker, and the **Compile** button shows up for languages of type Compile.
+- Custom languages work from the command line too.
+- To remove a language, delete its file from `~/.config/runix/custom_lang/`.
 
 ## Settings
 

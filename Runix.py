@@ -12,6 +12,7 @@ import json
 from runix_flag_window import flagwindow
 import shlex
 
+
 class pyg(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -42,6 +43,8 @@ class pyg(QMainWindow):
         self.flagwindow = flagwindow()
         self.compilercommand = None
         self.confdir = os.path.expanduser("~/.config/runix")
+        self.getcustomcommandextension()
+
 
 
     def shortcuts(self):
@@ -78,11 +81,14 @@ class pyg(QMainWindow):
             self.drag = True
             self.enabledcompilebutton(self.path)
             self.enableddecompilebutton(self.path)
+            self.detectcustomcommand()
             self.removeflagconffile()
 
     def file(self):
         self.drag = False
-        self.path = QFileDialog.getOpenFileName(self,"Select a file","","(*.py *.c *.cpp *.sh *.js *.java *.php *.lua *.pl *.rb *.go *.rs *.dart *.swift *.cs *.asm *.ts *.kt *.jar )")
+        self.customcom = self.getcustomcommandextension()
+        self.path = QFileDialog.getOpenFileName(self,"Select a file","",f"(*.py *.c *.cpp *.sh *.js *.java *.php *.lua *.pl *.rb *.go *.rs *.dart *.swift *.cs *.asm *.ts *.kt *.jar \
+        {self.customcom} );;All files (*)")
         if f"{self.path[0]}" != "":
             short_path = os.path.basename(f"{self.path[0]}")
             self.ui.Filebutton.setText(short_path)
@@ -90,11 +96,52 @@ class pyg(QMainWindow):
             self.ui.Runbutton.setEnabled(True)
             self.enabledcompilebutton(f"{self.path[0]}")
             self.enableddecompilebutton(f"{self.path[0]}")
+            self.detectcustomcommand()
             self.removeflagconffile()
             
         else:
             self.path = None
             self.ui.Runbutton.setEnabled(False)
+            self.closefile()
+    def detectcustomcommand(self,file=None):
+        resultfile = ""
+        localdrag = self.drag
+        if file != None:
+            localdrag = True
+        if localdrag == False:
+            resultfile = f"{self.path[0]}"
+        else:
+            resultfile = f"{self.path}"
+
+            
+
+        ext = os.path.splitext(os.path.basename(resultfile))[1]
+        langfile = f"{self.confdir}/custom_lang/{ext}.json"
+        if not os.path.exists(langfile):
+            return
+        try:
+            with open(langfile,"r",encoding="utf8") as b:
+                customcdata = json.load(b)
+            if customcdata["type"] == "compile":
+                self.ui.CompileButton.show()
+                self.ui.Runbutton.setText("Compile And Run")
+        except (OSError,KeyError,ValueError):
+            return
+
+    def getcustomcommandextension(self):
+        returnvalue = ""
+        if not os.path.exists(self.confdir) or not os.path.exists(f"{self.confdir}/custom_lang"):
+            return ""
+        for i in os.listdir(f"{self.confdir}/custom_lang"):
+            if not i.endswith(".json"):
+                continue
+            self.ext = os.path.splitext(os.path.basename(i))[0]
+            if not i.startswith("."):
+                returnvalue +=f"*.{self.ext} "
+            else:
+                returnvalue +=f"*{self.ext} "
+        return returnvalue
+        
 
 
 
@@ -110,9 +157,12 @@ class pyg(QMainWindow):
             with open(f"{self.confdir}/flag_cpp_c_code.txt","w") as m:
                 m.write("None")
     def recentylfiles(self):
-        self.data = []
         path = os.path.expanduser("~/.config/runix")
+        self.data = []
+        self.mrrc = False
         self.rfwindow = QDialog(self)
+        self.mrrcmrrfcombobox = QComboBox(self.rfwindow)
+        self.mrrcmrrfcombobox.addItems(["Most Recently Run Files","Most Recently Run Command"])
         self.rfwindow.setMinimumSize(700,450)
         self.rfwindow.setWindowTitle("Most Recently Run Files")
         self.rflayout = QVBoxLayout()
@@ -122,11 +172,8 @@ class pyg(QMainWindow):
         self.view.setModel(self.listmodel)
         self.searchbar = QLineEdit(self.rfwindow)
         self.searchbar.setPlaceholderText("Search.")
-        if os.path.exists(f"{path}/Mrrf.txt"):
-            with open(f"{path}/Mrrf.txt","r",encoding="utf8") as f:
-                self.reading = f.read().splitlines()
-            self.data.extend(self.reading[::-1])
-            self.listmodel.setStringList(self.data)
+        self.loadhistory()
+        self.rflayout.addWidget(self.mrrcmrrfcombobox)
         self.rflayout.addWidget(self.searchbar)
         self.rflayout.addWidget(self.view)
         self.view.clicked.connect(self.selectedfile)
@@ -134,8 +181,19 @@ class pyg(QMainWindow):
         self.rflayout.addWidget(self.clearbutton)
         self.clearbutton.clicked.connect(self.clearmrrf)
         self.searchbar.textChanged.connect(self.searchrf)
+        self.mrrcmrrfcombobox.currentIndexChanged.connect(self.mrrfc)
 
         self.rfwindow.show()
+
+    def mrrfc(self):
+        if self.mrrc == False:
+            self.mrrc = True
+            self.rfwindow.setWindowTitle("Most Recently Run Command")
+            self.loadhistory()
+        else:
+            self.mrrc = False
+            self.rfwindow.setWindowTitle("Most Recently Run Files")
+            self.loadhistory()
     def flagwindowstartup(self):
         if self.drag == False:
             if f"{self.path[0]}".endswith((".cpp",".c")):
@@ -146,6 +204,25 @@ class pyg(QMainWindow):
             if self.path.endswith((".cpp",".c")):
                 self.flagwindow.loadfile(self.path)
                 self.flagwindow.show()
+    def loadhistory(self):
+        self.data = []
+        path = os.path.expanduser("~/.config/runix")
+        if not os.path.exists(f"{path}"):
+            self.mrrcmrrfcombobox.hide()
+        else:
+            self.mrrcmrrfcombobox.show()
+        if self.mrrc == False:
+            if os.path.exists(f"{path}/Mrrf.txt"):
+                with open(f"{path}/Mrrf.txt","r",encoding="utf8") as f:
+                    self.reading = f.read().splitlines()
+                self.data.extend(self.reading[::-1])
+                self.listmodel.setStringList(self.data)
+        else:
+            if os.path.exists(f"{path}/MRRC.txt"):
+                with open(f"{path}/MRRC.txt","r") as b:
+                    self.mrrcdata = b.read().splitlines()
+                self.data.extend(self.mrrcdata[::-1])
+                self.listmodel.setStringList(self.data)
 
 
 
@@ -157,9 +234,14 @@ class pyg(QMainWindow):
             if self.textveri == "":
                 self.listmodel.setStringList(self.data)
                 return
-            for i in self.reading[::-1]:
-                if self.textveri in i:
-                    self.searchdata.append(i)
+            if self.mrrc == False:
+                for i in self.reading[::-1]:
+                    if self.textveri in i:
+                        self.searchdata.append(i)
+            else:
+                for b in self.mrrcdata[::-1]:
+                    if self.textveri in b:
+                        self.searchdata.append(b)
             self.listmodel.setStringList(self.searchdata)
         except AttributeError:
             return
@@ -170,10 +252,15 @@ class pyg(QMainWindow):
     def selectedfile(self,index):
         data = index.data()
         self.filedata = data
+        if self.mrrc == True:
+            QApplication.clipboard().setText(data)
+            QMessageBox.information(self,"Info","Successfully copied!")
+            return
         self.path = self.filedata
         self.ui.Filebutton.setText(self.path)
         self.ui.Runbutton.setEnabled(True)
         self.enabledcompilebutton(self.path)
+        self.detectcustomcommand(file=self.path)
         self.enableddecompilebutton(self.path)
         self.drag = True
         self.removeflagconffile()
@@ -183,8 +270,14 @@ class pyg(QMainWindow):
         path = os.path.expanduser("~/.config/runix")
         if not os.path.exists(path):
             os.mkdir(path)
-        with open(f"{path}/Mrrf.txt","w") as f:
-            f.write("")
+        if self.mrrc == False:
+            with open(f"{path}/Mrrf.txt","w") as f:
+                f.write("")
+        else:
+            try:
+                os.remove(f"{path}/MRRC.txt")
+            except FileNotFoundError:
+                return
         self.data = []
         self.searchdata = []
         self.listmodel.setStringList(self.data)
@@ -545,10 +638,10 @@ def runfile(file = None,compile=False,ui=False):
         if "ELF" in elf.stdout:
             elffargument = run_program_with_arguments()
             if elffargument != None:
-
                 subprocess.Popen([terminal]+flag+[klasor]+[file]+elffargument)
             else:
                 subprocess.Popen([terminal]+flag+[klasor]+[file])
+            MRRCintlang([file],elffargument)
             return
     C_compiler_name = ""
     CPP_compiler_name = ""
@@ -601,6 +694,7 @@ def runfile(file = None,compile=False,ui=False):
             subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file]+shargument)
         else:
             subprocess.Popen([terminal]+flag+[klasor]+["bash"]+[file])
+        MRRCintlang(["bash",file],shargument)
 
     elif file.endswith(".js"):
         interpreterlanguage("node",["node",file],terminal,klasor,flag,writeflag)
@@ -615,6 +709,7 @@ def runfile(file = None,compile=False,ui=False):
             elif java.returncode != 0:
                 javaerror = java.stderr
                 subprocess.Popen([terminal]+writeflag+[javaerror])
+            MRRCcomplang(["javac",file],["java",f"{filename}"],run_program_with_arguments(),compile)
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR javac or java not found. Please install the JDK."])
     elif file.endswith(".php"):
@@ -636,6 +731,7 @@ def runfile(file = None,compile=False,ui=False):
     elif file.endswith(".cs"):
         if shutil.which("dotnet"):
             run_with_argument(terminal,flag,klasor,["dotnet","run",file])
+            MRRCintlang(["dotnet","run",file],run_program_with_arguments())
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR dotnet not found Please install dotnet"])
     elif file.endswith(".asm"):
@@ -650,12 +746,14 @@ def runfile(file = None,compile=False,ui=False):
         if assembly.returncode == 0:
             ldassmebly = subprocess.run(["ld",f"{filename}.o","-o",filename],capture_output=True,text=True,cwd=klasor)
             if ldassmebly.returncode == 0 and compile ==False:
-                run_with_argument(terminal,flag,klasor,[f"./{filename}"])
+                argument = run_with_argument(terminal,flag,klasor,[f"./{filename}"])
             elif ldassmebly.returncode == 0 and compile == True and ui == True:
                 QMessageBox.information(None,"Compile","Successfully compiled")
             elif ldassmebly.returncode != 0:
                 lderror = ldassmebly.stderr
                 subprocess.Popen([terminal]+writeflag+[lderror])
+            argument = run_program_with_arguments()
+            MRRCcomplang(["nasm","-f","elf64",file,"-o",f"{filename}.o"],[f"./{filename}"],argument,compile,linkercommand=["ld",f"{filename}.o","-o",filename])
         else:
             assemblyerror = assembly.stderr
             subprocess.Popen([terminal]+writeflag+[assemblyerror])
@@ -668,14 +766,60 @@ def runfile(file = None,compile=False,ui=False):
     elif file.endswith(".jar"):
         if shutil.which("java"):
             run_with_argument(terminal,flag,klasor,["java","-jar",file])
+            jarargument = run_program_with_arguments()
+            MRRCintlang(["java","-jar",file],jarargument)
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR java not found. Please install the JRE/JDK."])
 
     else:
-        if ui is True:
-            QMessageBox.critical(None,"File Type",f"unsupported file type:{file}")
+        customlanguage(path,file,filename,ui,compile,klasor,terminal,flag,writeflag)
+
+
+def filenotfoundmessage(ui,file,terminal,writeflag):       
+    if ui is True:
+        QMessageBox.critical(None,"File Type",f"unsupported file type:{file}")
+    else:
+        subprocess.Popen([terminal]+writeflag+[f"unsupported file type:{file}"])
+
+def customlanguage(path,file,filename,ui,compile,klasor,terminal,flag,writeflag):
+    ext = os.path.splitext(os.path.basename(file))[1]
+    langfile = f"{path}/custom_lang/{ext}.json"
+    if not os.path.exists(langfile):
+        filenotfoundmessage(ui,file,terminal,writeflag)
+        return
+    try:
+        with open(langfile,"r",encoding="utf8") as m:
+            data = json.load(m)
+        compiledfilext = None
+        if data["type"] == "compile":
+            compiledfilext = data["cfe"]
+        result = rccexpand(data["execdata"],file,filename,cfe=compiledfilext)
+        if data["type"] == "interpreter":
+            interpreterlanguage(data["namedata"],result,terminal,klasor,flag,writeflag)
+        elif data["type"] == "compile":
+            if data["cfe"] == "ELF":
+                runcommand = [f"./{filename}"]
+            else:
+                runcommand = rccexpand(data["executecommand"],file,filename,cfe=data["cfe"])
+            compilerlanguea(data["namedata"],result,ui,compile,file,klasor,terminal,flag,writeflag,runcommand)
         else:
-            subprocess.Popen([terminal]+writeflag+[f"unsupported file type:{file}"])
+            subprocess.Popen([terminal]+writeflag+[f"invalid file {ext}.json"])
+    except (OSError,ValueError,KeyError):
+        subprocess.Popen([terminal]+writeflag+[f"invalid file {ext}.json"])
+
+def rccexpand(command,file,filename,cfe=None):
+    result = []
+    for b in shlex.split(command):
+        if b == "rcc=file":
+            b = file
+        elif b == "rcc=compiledfile":
+            if cfe is not None and cfe != "ELF" and cfe.strip():
+                b = filename + cfe
+            else:
+                b = filename
+
+        result.append(b)
+    return result
 def run_program_with_arguments():
     path = os.path.expanduser("~/.config/runix")
     if not os.path.exists(path):
@@ -707,6 +851,7 @@ def interpreterlanguage(langname,command,terminal,klasor,flag,writeflag):
             subprocess.Popen([terminal]+flag+[klasor]+command+argument)
         else:
             subprocess.Popen([terminal]+flag+[klasor]+command)
+        MRRCintlang(command,argument)
         
     else:
         subprocess.Popen([terminal]+writeflag+[f"Error {langname} not found Please install {langname}"])
@@ -736,9 +881,49 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
     if file.endswith((".cpp",".c")) and language.returncode == 0:
         with open(f"{path}/flag_cpp_c_code.txt","w",encoding="utf8") as n:
             n.write("None")
+    MRRCcomplang(command,runcommand,argument,compile)
 
-    
 
+def MRRCcomplang(command,runcommand,argument,compile,linkercommand=None):
+    path = os.path.expanduser("~/.config/runix")
+    if os.path.exists(path):
+        Most_recently_compile_command = shlex.join(command)
+        Most_recently_run_command = shlex.join(runcommand)
+        if argument != None:
+            m_argument = shlex.join(argument)
+            Most_recently_run_command += f" {m_argument}"
+        if compile == False and linkercommand == None:
+            MRRC = f"{Most_recently_compile_command} && {Most_recently_run_command}"
+        else:
+            MRRC = f"{Most_recently_compile_command}"
+        if linkercommand != None:
+            Most_recently_linker_command = shlex.join(linkercommand)
+            if compile == False:
+                MRRC = f"{Most_recently_compile_command} && {Most_recently_linker_command} && {Most_recently_run_command}"
+            else:
+                MRRC = f"{Most_recently_compile_command} && {Most_recently_linker_command}"
+        if not os.path.exists(f"{path}/MRRC.txt"):
+            with open(f"{path}/MRRC.txt","w") as b:
+                b.write(f"{MRRC}")
+        else:
+            with open(f"{path}/MRRC.txt","a") as h:
+                h.write(f"\n{MRRC}")
+def MRRCintlang(command,argument):
+    path = os.path.expanduser("~/.config/runix")
+    if os.path.exists(path):
+        MRRC = ""
+        runcom = shlex.join(command)
+        if argument != None:
+            argumentjoin = shlex.join(argument)
+            MRRC += f"{runcom} {argumentjoin}"
+        else:
+            MRRC = f"{runcom}"
+        if not os.path.exists(f"{path}/MRRC.txt"):
+            with open(f"{path}/MRRC.txt","w") as f:
+                f.write(MRRC)
+        else:
+            with open(f"{path}/MRRC.txt","a") as b:
+                b.write(f"\n{MRRC}")
 def decompilefile(file,ui=True):
     file = os.path.abspath(file)
     decompiler = "objdump"
