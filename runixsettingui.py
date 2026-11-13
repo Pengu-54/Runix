@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'runix-settings1meDXkd.ui'
+## Form generated from reading UI file 'runix-settings1TpJPYy.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.12.0
 ##
@@ -159,6 +159,11 @@ class Ui_SettingWindow(object):
 
         self.verticalLayout_5.addWidget(self.addlangbutton)
 
+        self.add_lib_button = QPushButton(self.tab_4)
+        self.add_lib_button.setObjectName(u"add_lib_button")
+
+        self.verticalLayout_5.addWidget(self.add_lib_button)
+
         self.Resetsettings_button = QPushButton(self.tab_4)
         self.Resetsettings_button.setObjectName(u"Resetsettings_button")
         self.Resetsettings_button.setStyleSheet(u"color: rgb(255, 0, 0);")
@@ -221,6 +226,7 @@ class Ui_SettingWindow(object):
 
         self.Runix_help_button.setText(QCoreApplication.translate("SettingWindow", u"Help", None))
         self.addlangbutton.setText(QCoreApplication.translate("SettingWindow", u"Add a language", None))
+        self.add_lib_button.setText(QCoreApplication.translate("SettingWindow", u"Add library", None))
         self.Resetsettings_button.setText(QCoreApplication.translate("SettingWindow", u"Reset Settings", None))
         self.applyrunixsetting_button.setText(QCoreApplication.translate("SettingWindow", u"Apply", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), QCoreApplication.translate("SettingWindow", u"Runix", None))

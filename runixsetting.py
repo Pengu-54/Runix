@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
 from PyQt6.QtGui import *
 from runixsettingui import Ui_SettingWindow
+from runix_library import library_ui
 import os 
 import shutil
 import json
@@ -15,6 +16,9 @@ class setting(QMainWindow):
         self.settingui.setupUi(self)
         self.settingui.applybutton.clicked.connect(self.apply)
         self.settingui.Applydcompiler.clicked.connect(self.default_decompiler)
+        self.libui = library_ui()
+        self.libui.hide()
+        self.settingui.add_lib_button.clicked.connect(lambda:self.libui.show())
         self.setcurrentterminalcbox()
         self.setcurrentextdefault_decompilercombobox()
         self.settingui.applycompilebutton.clicked.connect(self.setcompile)
@@ -54,7 +58,6 @@ class setting(QMainWindow):
         rhwindow.setLayout(rhlayout)
         rhcancelbutton.clicked.connect(lambda:rhwindow.accept())
         rhwindow.show()
-
 
     def conffilecontroller(self,Detectfile=None,writefile=None,read=False):
         if not os.path.exists(self.confdir):

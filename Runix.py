@@ -11,6 +11,7 @@ import shutil
 import json
 from runix_flag_window import flagwindow
 import shlex
+from librarydetect import library
 
 
 class pyg(QMainWindow):
@@ -663,7 +664,7 @@ def runfile(file = None,compile=False,ui=False):
         pass
 
 
-    if os.path.exists(f"{path}/flag_cpp_c_code.txt"):
+    if os.path.exists(f"{path}/flag_cpp_c_code.txt"): 
         with open(f"{path}/flag_cpp_c_code.txt","r",encoding="utf8") as i:
             flagdata = i.read()
         if flagdata != "None" and file.endswith((".cpp",".c")):
@@ -856,7 +857,30 @@ def interpreterlanguage(langname,command,terminal,klasor,flag,writeflag):
     else:
         subprocess.Popen([terminal]+writeflag+[f"Error {langname} not found Please install {langname}"])
 
+def resolve(cmd):
+    if cmd.startswith("pkg-config:"):
+        for alt in cmd.split(":", 1)[1].split("|"):      
+            pkgs = alt.split()
+            r = subprocess.run(["pkg-config", "--cflags", "--libs"] + pkgs, capture_output=True, text=True)
+            if r.returncode == 0:
+                return r.stdout.strip()
+        return None
+    return cmd
+
 def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,writeflag,runcommand=None):
+    try:
+        lib = library()
+        fpcstatus = False
+        fpc = tuple(lib.getfpicfileext())
+        for i in lib.detectlibrary(file):
+            if i.startswith("pkg-config"):
+                i = resolve(i)
+            if fpcstatus == False and file.endswith(fpc):
+                command.insert(1,"-fPIC")
+                fpcstatus = True
+            command.extend(shlex.split(i))
+    except TypeError:
+        pass
     path = os.path.expanduser("~/.config/runix")
     filename = os.path.splitext(os.path.basename(file))[0]
     argument = run_program_with_arguments()

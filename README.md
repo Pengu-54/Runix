@@ -11,8 +11,9 @@ A universal file runner for Linux. Drop a file, Runix figures out the language a
 - Compile-only or compile & run
 - Program arguments (right-click **Run**)
 - Custom compiler flags for C/C++ (`-std`, `-I`, `-include`, `-lm`)
+- **Automatic C/C++ library detection** (Qt, GTK, GLFW, Vulkan, SDL2, SFML, ncurses, curl, math, …)
 - Decompile ELF binaries and JAR files (objdump, retdec, jadx)
-- Recently run files and commands list with search
+- Recently run **files** and **commands** (copy the exact compile/run line)
 - Add your own languages (custom interpreters and compilers)
 - Configurable default terminal, compilers and decompiler
 - Display backend setting (X11 / Wayland)
@@ -101,6 +102,30 @@ Notes:
 - If the compilation fails, the flags are kept so you can fix the code and try again.
 - Runix uses your default C/C++ compiler (gcc/g++ or clang/clang++) from the settings.
 - Paths containing spaces are supported.
+- Manual flags work together with **automatic library detection** (see below).
+
+## Automatic library detection (C / C++)
+
+Before compiling a `.c` or `.cpp` file, Runix scans `#include` lines and adds linker / pkg-config flags when it recognizes a known library.
+
+Built-in detections (defaults; stored in `~/.config/runix/librarys.json` on first use):
+
+| Include (example) | Flags / pkg-config |
+|-------------------|--------------------|
+| `#include <QApplication>` | `pkg-config Qt6Widgets` (fallback Qt5Widgets) |
+| `#include <GLFW/glfw3.h>` | `-lglfw -lGL -ldl` |
+| `#include <vulkan/vulkan.h>` | `-lvulkan` |
+| `#include <gtk/gtk.h>` | `pkg-config gtk4` (fallback gtk+-3.0) |
+| `#include <math.h>` | `-lm` |
+| `#include <curl/curl.h>` | `pkg-config libcurl` |
+| `#include <SFML/Graphics.hpp>` | `pkg-config sfml-all` (fallback sfml-graphics) |
+| `#include <SDL2/SDL.h>` | `pkg-config sdl2` |
+| `#include <ncurses.h>` | `pkg-config ncurses` |
+
+You can add more headers and flags from the **library** UI (or by editing `librarys.json`).  
+`pkg-config` is recommended for packages that ship a `.pc` file (`pkgconf` on Arch).
+
+The exact command Runix ran (including auto flags) appears under **Most Recently Run Command**.
 
 ## Recently Run Files and Commands
 
@@ -194,6 +219,8 @@ cd Runix
 makepkg -si
 ```
 
+Replace `sha256sums=('SKIP')` with the real checksum before publishing (`makepkg -g`).
+
 ## Dependencies
 
 Required:
@@ -206,6 +233,7 @@ Required:
 Optional (install what you need):
 
 - Language runtimes and compilers: `gcc`, `clang`, `nodejs`, `php`, `lua`, `ruby`, `perl`, a JDK, `go`, `rust`, `dart`, `swift`, `kotlin`, `nasm`, `dotnet`
+- Auto-detect / libraries: `pkgconf`, Qt6, GLFW, Vulkan loader, GTK4/GTK3, SDL2, SFML, ncurses, curl
 - `binutils` for objdump, `jadx` for JAR decompiling, `retdec` for ELF decompiling
 - `libnotify` for decompile notifications
 - `qt6-wayland` to run natively on Wayland
