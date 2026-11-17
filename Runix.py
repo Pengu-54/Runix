@@ -45,6 +45,8 @@ class pyg(QMainWindow):
         self.compilercommand = None
         self.confdir = os.path.expanduser("~/.config/runix")
         self.getcustomcommandextension()
+        self.detectMRRCsize()
+        self.detectMRRFsize()
 
 
 
@@ -65,7 +67,28 @@ class pyg(QMainWindow):
 
     
 
+    def detectMRRCsize(self):
+        try:
+            fq = None
+            if os.path.getsize(f"{self.confdir}/MRRC.txt")  >= 1048576:
+                fq = QMessageBox.question(self,"MRRC Limit","The Most Recently Run Commands list (MRRC.txt) has reached 1 MB. Do you want to reset it?",QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No)
+            if fq == QMessageBox.StandardButton.Yes:
+                os.remove(f"{self.confdir}/MRRC.txt")
+        except FileNotFoundError:
+            return
 
+    def detectMRRFsize(self):
+        try:
+            fq = None
+            if os.path.getsize(f"{self.confdir}/Mrrf.txt") >= 1048576:
+                fq=QMessageBox.question(self,"Mrrf Limit","The Most Recently Run Files list (Mrrf.txt) has reached 1 MB. Do you want to reset it?",QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No)
+            if fq == QMessageBox.StandardButton.Yes:
+                with open(f"{self.confdir}/Mrrf.txt","w") as f:
+                    f.write("")
+        except FileNotFoundError:
+            return
 
 
         
@@ -161,7 +184,7 @@ class pyg(QMainWindow):
         path = os.path.expanduser("~/.config/runix")
         self.data = []
         self.mrrc = False
-        self.rfwindow = QDialog(self)
+        self.rfwindow = QDialog()
         self.mrrcmrrfcombobox = QComboBox(self.rfwindow)
         self.mrrcmrrfcombobox.addItems(["Most Recently Run Files","Most Recently Run Command"])
         self.rfwindow.setMinimumSize(700,450)
@@ -580,10 +603,7 @@ def runfile(file = None,compile=False,ui=False):
         flag = ["--","bash","-lc",'cd "$1" || exit; shift; "$@"; echo; read -p "Press Enter to close..." _',"runix"]
         writeflag = ["--","bash","-lc",'printf "%b\n" "$1"; read -p "Press Enter to close..." _',"runix"]
     else:
-        if ui == True:
-            QMessageBox.critical(None,"Error","No supported terminal found.")
-        else:
-            subprocess.Popen(["notify-send","Error","No supported terminal found"])
+        write_error_mes(ui,"Error","No supported terminal found.")
         return
 
 
@@ -621,7 +641,7 @@ def runfile(file = None,compile=False,ui=False):
         if not shutil.which(terminal):
             if ui == True:
                 QMessageBox.critical(None,"Error",f"{terminal} not found")
-            else:
+            elif shutil.which("notify-send") and ui == False:
                 subprocess.Popen(["notify-send","Error",f"{terminal} not found"])
             return
 
@@ -710,7 +730,8 @@ def runfile(file = None,compile=False,ui=False):
             elif java.returncode != 0:
                 javaerror = java.stderr
                 subprocess.Popen([terminal]+writeflag+[javaerror])
-            MRRCcomplang(["javac",file],["java",f"{filename}"],run_program_with_arguments(),compile)
+            if java.returncode == 0:
+                MRRCcomplang(["javac",file],["java",f"{filename}"],run_program_with_arguments(),compile)
         else:
             subprocess.Popen([terminal]+writeflag+["ERROR javac or java not found. Please install the JDK."])
     elif file.endswith(".php"):
@@ -754,7 +775,8 @@ def runfile(file = None,compile=False,ui=False):
                 lderror = ldassmebly.stderr
                 subprocess.Popen([terminal]+writeflag+[lderror])
             argument = run_program_with_arguments()
-            MRRCcomplang(["nasm","-f","elf64",file,"-o",f"{filename}.o"],[f"./{filename}"],argument,compile,linkercommand=["ld",f"{filename}.o","-o",filename])
+            if ldassmebly.returncode == 0:
+                MRRCcomplang(["nasm","-f","elf64",file,"-o",f"{filename}.o"],[f"./{filename}"],argument,compile,linkercommand=["ld",f"{filename}.o","-o",filename])
         else:
             assemblyerror = assembly.stderr
             subprocess.Popen([terminal]+writeflag+[assemblyerror])
@@ -839,7 +861,7 @@ def run_program_with_arguments():
 def run_with_argument(terminal,flag,klasor,command):
     argument = run_program_with_arguments()
     if argument != None:
-        lang = subprocess.Popen([terminal]+flag+[klasor]+command+argument,)
+        lang = subprocess.Popen([terminal]+flag+[klasor]+command+argument)
     else:
         subprocess.Popen([terminal]+flag+[klasor]+command)
 
@@ -857,15 +879,25 @@ def interpreterlanguage(langname,command,terminal,klasor,flag,writeflag):
     else:
         subprocess.Popen([terminal]+writeflag+[f"Error {langname} not found Please install {langname}"])
 
-def resolve(cmd):
-    if cmd.startswith("pkg-config:"):
-        for alt in cmd.split(":", 1)[1].split("|"):      
-            pkgs = alt.split()
-            r = subprocess.run(["pkg-config", "--cflags", "--libs"] + pkgs, capture_output=True, text=True)
-            if r.returncode == 0:
-                return r.stdout.strip()
-        return None
-    return cmd
+def resolve(cmd,ui):
+    try:
+        if cmd.startswith("pkg-config:"):
+            if not shutil.which("pkg-config"):
+                if ui == True:
+                    QMessageBox.critical(None,"ERROR","pkg-config not found please install pkg-config")
+                    return ""
+                else:
+                    print("ERROR","pkg-config not found please install pkg-config")
+                    return ""
+            for alt in cmd.split(":", 1)[1].split("|"):      
+                pkgs = alt.split()
+                r = subprocess.run(["pkg-config", "--cflags", "--libs"] + pkgs, capture_output=True, text=True)
+                if r.returncode == 0:
+                    return r.stdout.strip()
+            return ""
+        return cmd
+    except OSError:
+        return ""
 
 def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,writeflag,runcommand=None):
     try:
@@ -874,7 +906,9 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
         fpc = tuple(lib.getfpicfileext())
         for i in lib.detectlibrary(file):
             if i.startswith("pkg-config"):
-                i = resolve(i)
+                i = resolve(i,ui)
+            if not i:
+                continue
             if fpcstatus == False and file.endswith(fpc):
                 command.insert(1,"-fPIC")
                 fpcstatus = True
@@ -905,7 +939,8 @@ def compilerlanguea(languagename,command,ui,compile,file,klasor,terminal,flag,wr
     if file.endswith((".cpp",".c")) and language.returncode == 0:
         with open(f"{path}/flag_cpp_c_code.txt","w",encoding="utf8") as n:
             n.write("None")
-    MRRCcomplang(command,runcommand,argument,compile)
+    if language.returncode == 0:
+        MRRCcomplang(command,runcommand,argument,compile)
 
 
 def MRRCcomplang(command,runcommand,argument,compile,linkercommand=None):
@@ -966,11 +1001,11 @@ def decompilefile(file,ui=True):
             outputfolder = f"{filename}_decompiled"
             jde = subprocess.run(["jadx",file,"-d",outputfolder],cwd=klasor)
             if jde.returncode != 0:
-                subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
+                write_error_mes(ui,"Decompile","The decompilation process completed with errors")
             else:
-                subprocess.run(["notify-send","Decompile","The decompilation was successful"])
+                write_error_mes(ui,"Decompile","The decompilation was successful")
         else:
-            subprocess.run(["notify-send","Error","Jadx not found Please install Jadx"])
+            write_error_mes(ui,"Error","Jadx not found Please install Jadx")
         return
 
     elf = None
@@ -984,16 +1019,22 @@ def decompilefile(file,ui=True):
             with open(f"{file}.asm", "w", encoding="utf8") as out:
                 result = subprocess.run(["objdump", "-d", file], stdout=out)
         else:
-            subprocess.run(["notify-send","Error","objdump not found Please install binutils"])
+            write_error_mes(ui,"Error","objdump not found Please install binutils")
             return
         if result.returncode == 0:
-            subprocess.run(["notify-send","Decompile","The decompilation was successful"])
+            write_error_mes(ui,"Decompile","The decompilation was successful")
         else:
-            subprocess.run(["notify-send","Decompile","The decompilation process completed with errors"])
+            write_error_mes(ui,"Decompile","The decompilation process completed with errors")
         return
 
-    subprocess.run(["notify-send","File type","This file type is not supported"])
-
+    write_error_mes(ui,"File type","This file type is not supported")
+def write_error_mes(ui,title,text):
+    if ui == True:
+        QMessageBox.about(None,title,text)
+    elif ui != True and shutil.which("notify-send"):
+        subprocess.run(["notify-send",title,text])
+    elif ui != True and not shutil.which("notify-send"):
+        print(text)
 def writeterminalsetting(terminal):
     terminals = ["Xfce-Terminal","Gnome-console","Kitty","Konsole","Alacritty","Gnome-terminal","Auto"]
     if terminal == "Gnome-console":

@@ -24,7 +24,7 @@ class library:
                 return
         if jsondata != None:
             try:
-                with open(f"{self.confdir}/librarys.json","a") as n:
+                with open(f"{self.confdir}/librarys.json","w",encoding="utf8") as n:
                     json.dump(jsondata,n)
             except (OSError,json.JSONDecodeError,KeyError):
                 return
@@ -46,7 +46,7 @@ class library:
                         
 
         except (FileNotFoundError,json.JSONDecodeError,KeyError,OSError):
-            return None
+            return []
     def addcustomlibrary(self,libraryname,library_command,fileexntFpic=None):
         try:
             if os.path.exists(f"{self.confdir}/librarys.json"):

@@ -1,6 +1,6 @@
 # Maintainer: Pengu-54
 pkgname=runix
-pkgver=1.7
+pkgver=1.7.1
 pkgrel=1
 pkgdesc="Universal file runner for Linux — drop a file, Runix runs or compiles it"
 arch=('any')

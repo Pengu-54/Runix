@@ -6,6 +6,7 @@ from PyQt6.QtGui import*
 from ui_runix_flag_ui import Ui_FlagWindow
 import shutil
 import json
+import shlex
 class flagwindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -103,6 +104,10 @@ class flagwindow(QMainWindow):
             self.compilercommand.append("-lm")
         self.getcompilercommand()
         QMessageBox.information(self,"Flag Setting","The settings were saved successfully")
+        self.ui.stdlineedit.clear()
+        self.ui.Ilineedit.clear()
+        self.ui.includelineedit.clear()
+        self.ui.lmcheckbox.setChecked(False)
         self.hide()
         return self.compilercommand.copy()
 
@@ -113,7 +118,7 @@ class flagwindow(QMainWindow):
                 f.write("None")
             return None
         with open(f"{self.path}/flag_cpp_c_code.txt", "w", encoding="utf8") as f:
-            commnd = " ".join(self.compilercommand)
+            commnd = shlex.join(self.compilercommand)
             f.write(commnd)
             
                 
@@ -121,14 +126,6 @@ class flagwindow(QMainWindow):
         return self.compilercommand.copy()
 
 
-
-
-
-
-
-        
-                    
-            
 
 
 
